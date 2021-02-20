@@ -1222,6 +1222,7 @@ SOKOL_APP_API_DECL const char* sapp_get_dropped_file_path(int index);
 
 /* special run-function for SOKOL_NO_ENTRY (in standard mode this is an empty stub) */
 SOKOL_APP_API_DECL void sapp_run(const sapp_desc* desc);
+SOKOL_APP_API_DECL void sapp_run2(const sapp_desc* desc, unsigned int wid);
 
 /* GL: return true when GLES2 fallback is active (to detect fallback from GLES3) */
 SOKOL_APP_API_DECL bool sapp_gles2(void);
@@ -1272,6 +1273,7 @@ SOKOL_APP_API_DECL const void* sapp_android_get_native_activity(void);
 
 /* reference-based equivalents for C++ */
 inline void sapp_run(const sapp_desc& desc) { return sapp_run(&desc); }
+inline void sapp_run2(const sapp_desc& desc, unsigned int wid) { return sapp_run2(&desc, wid); }
 
 #endif
 
@@ -10048,7 +10050,7 @@ _SOKOL_PRIVATE void _sapp_x11_process_event(XEvent* event) {
     }
 }
 
-_SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
+_SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc, unsigned int wid) {
     /* The following lines are here to trigger a linker error instead of an
         obscure runtime error if the user has forgotten to add -pthread to
         the compiler or linker options. They have no other purpose.
@@ -10067,7 +10069,13 @@ _SOKOL_PRIVATE void _sapp_linux_run(const sapp_desc* desc) {
         _sapp_fail("XOpenDisplay() failed!\n");
     }
     _sapp.x11.screen = DefaultScreen(_sapp.x11.display);
-    _sapp.x11.root = DefaultRootWindow(_sapp.x11.display);
+    //_sapp.x11.root = DefaultRootWindow(_sapp.x11.display);
+     unsigned int dRoot = DefaultRootWindow(_sapp.x11.display);
+    if (wid>0){
+        _sapp.x11.root = wid;
+    } else {
+        _sapp.x11.root = DefaultRootWindow(_sapp.x11.display);
+    }
     XkbSetDetectableAutoRepeat(_sapp.x11.display, true, NULL);
     _sapp_x11_query_system_dpi();
     _sapp.dpi_scale = _sapp.x11.dpi / 96.0f;
@@ -10127,6 +10135,9 @@ int main(int argc, char* argv[]) {
 /*== PUBLIC API FUNCTIONS ====================================================*/
 #if defined(SOKOL_NO_ENTRY)
 SOKOL_API_IMPL void sapp_run(const sapp_desc* desc) {
+}
+
+SOKOL_API_IMPL void sapp_run2(const sapp_desc* desc, unsigned int wid) {
     SOKOL_ASSERT(desc);
     #if defined(_SAPP_MACOS)
         _sapp_macos_run(desc);
@@ -10139,7 +10150,7 @@ SOKOL_API_IMPL void sapp_run(const sapp_desc* desc) {
     #elif defined(_SAPP_UWP)
         _sapp_uwp_run(desc);
     #elif defined(_SAPP_LINUX)
-        _sapp_linux_run(desc);
+        _sapp_linux_run(desc,wid);
     #else
         // calling sapp_run() directly is not supported on Android)
         _sapp_fail("sapp_run() not supported on this platform!");
